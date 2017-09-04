@@ -14,8 +14,6 @@ There is a [complete example](./samples/Recipes.TeamCity.cake) of a TeamCity awa
 
 To ensure that an entire task is only run when you are on TeamCity build server, use the `.WithCriteria()` method on `Task` to selectively execute the Task and pass it in the statically available `BuildSystem.IsRunningOnTeamCity`.
 
-##### Example
-
 ```csharp
 Task("Publish")
     .IsDependentOn("PackageArtifacts")
@@ -23,16 +21,78 @@ Task("Publish")
     .Does(() =>
 {
     string artifactsDir = @"./artifacts";
-
-    // Publishing a nuget package to TeamCity is
-    //  as easy as adding it to the artifacts for a build
     BuildSystem.TeamCity.PublishArtifacts(artifactsDir);
+});
+```
+
+#### Publish Build Output as a TeamCity Artifact
+
+Build output of succesful builds can be marked as "artifacts" and will be saved by TeamCity so that they can be downloaded and used.  Typically this is used for installers, packaged coded, executables, or any other distributable file.  Artifacts can be created with the static method `BuildSystem.TeamCity.PublishArtifacts(pathToFile)`.
+
+To publish a TeamCity artifact
+
+1. Create a task to generate the artifact
+1. Create a second task to publish that artifact
+1. Use `WithCriteria` to only run the second task when in TeamCity
+
+```csharp
+Task("Build")
+    .IsDependentOn("Clean")
+    .Does(() =>
+{
+    DotNetCoreMSBuild(@"./HelloWorld/HelloWorld.csproj");
+});
+
+Task("PublishArtifact")
+    .IsDependentOn("Build")
+    .WithCriteria(BuildSystem.IsRunningOnTeamCity)
+    .Does(() =>
+{
+    string artifact = @"./HelloWorld/bin/Release/HelloWorld.exe";
+    BuildSystem.TeamCity.PublishArtifacts(artifact);
 });
 ```
 
 #### Publish Packages to the TeamCity NuGet Feed
 
-TeamCity comes with a a
+TeamCity comes with a NuGet feed server.  To configure it see the TeamCity documentation.  Once conifgured, any .nupkg file marked as an artifact in the build will be published to the feed.  From within cake, the `BuildSystem.TeamCity.PublishArtifacts(pathToFiles)` method will tell TeamCity which files to mark as artifacts for the build.
+
+To publish a NuGet package to the TeamCity Feed:
+
+1. Define an artifacts directory
+1. Create a task to package your NuGet package
+1. In that task set the output directory of the package to the artifacts directory
+1. Create a second task to publish all the files in the artifacts directory
+1. Use `WithCriteria` to only run the second task when in TeamCity
+
+```csharp
+
+// Define an artifacts directory
+string artifactsDir = @"./artifacts";
+
+Task("PackageArtifacts")
+    .Does(() =>
+{
+    string slnFile = @"./HelloWorld.sln";
+    var packSettings = new DotNetCorePackSettings
+    {
+        // Set the output directory of the
+        // package to the artifacts directory
+        OutputDirectory = artifactsDir,
+    };
+
+    DotNetCorePack(slnFile, packSettings);
+});
+
+Task("Publish")
+    .IsDependentOn("PackageArtifacts")
+    .WithCriteria(BuildSystem.IsRunningOnTeamCity)
+    .Does(() =>
+{
+    // Publish all the files in the artifacts directory
+    BuildSystem.TeamCity.PublishArtifacts(artifactsDir);
+});
+```
 
 #### Using the TeamCity Nuget Feed as a Source for Packages
 
@@ -53,8 +113,14 @@ Log on to each TeamCity build agent and run the following command at the command
 > nuget.exe sources -add -name "NuGet Feed" -source <FEED URL> -name <USERNAME> -password <PASSWORD>
 ```
 
-Where: 
+Where:
 
 * `<FEED URL>` is the path to the NuGet server on TeamCity
 * `<USERNAME>` is the name of a TeamCity user that has been granted permissiosn for the NuGet feed
 * `<PASSWORD>` is the password for the `<USERNAME>` user
+
+#### Access TeamCity Parameters
+
+#### Use the TeamCity Build Number If It's Available As the Build Number
+
+#### Use the TeamCity Build Number If It's Available As the NuGet Package Version
