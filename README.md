@@ -119,8 +119,44 @@ Where:
 * `<USERNAME>` is the name of a TeamCity user that has been granted permissiosn for the NuGet feed
 * `<PASSWORD>` is the password for the `<USERNAME>` user
 
-#### Access TeamCity Parameters
+#### Access TeamCity Parameters as Arguments
+
+TeamCity exposes a wealth of environmetn and build information to each build, for example build numbers, source control branches, and passwords.  To access these you can either:
+
+1. Pass them in from the TeamCity build step as script parameters
+1. Set them as environment variables in the TeamCity parameters page and then read them from the environment in the cake script
+
+TODO show screen shots setting up TC
+
+```csharp
+var config = Argument("branch", "<NONE>");
+Information("Building the {0} branch", branch);
+```
+#### Access TeamCity Parameters as Environment Variables
+
+TeamCity exposes a wealth of environmetn and build information to each build, for example build numbers, source control branches, and passwords.  To access these you can either:
+
+1. Pass them in from the TeamCity build step as script parameters
+1. Set them as environment variables in the TeamCity parameters page and then read them from the environment in the cake script
+
+TODO show screen shots setting up TC
+
+```csharp
+var branch = EnvironmentVariable("vcsroot.branch");
+Information("Building the {0} branch", branch);
+```
 
 #### Use the TeamCity Build Number If It's Available As the Build Number
 
 #### Use the TeamCity Build Number If It's Available As the NuGet Package Version
+
+#### Outputting to the TeamCity Build Log
+
+## Dot Net Core
+
+### Build
+
+### Test
+
+### Warn as Errors
+
